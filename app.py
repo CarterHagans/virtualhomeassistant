@@ -18,6 +18,8 @@ if __name__ == "__main__":
 
 
     def dated_url_for(endpoint, **values):
+
+
         if endpoint == 'static':
             filename = values.get('filename', None)
             if filename:

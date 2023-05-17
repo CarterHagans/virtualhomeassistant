@@ -76,7 +76,7 @@ def sms_reply():
             if content.lower() == "create" or content.lower() ==  "createfamily" or content.lower() == "createfam" and usr.currentFam == "None":
                 code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
-                family = Family("TEMP",usr.phone_number,json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]))
+                family = Family("TEMP",usr.phone_number,json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]),json.dumps([]))
                 db.session.add(family)
                 rsp = "Please choose a name for your new family!"
                 usr.status = "choosingNameForFamily"
@@ -131,7 +131,7 @@ def sms_reply():
                 for fam in Family.query.all():
                     
                     if code == fam.joincode and users_number != fam.owner and fam.name not in fam_names:
-                        usrs_fams.append(f"{fam.name}:owned by {fam.owner}")
+                        usrs_fams.append(f"{fam.name}")
                         usr.families = json.dumps(usrs_fams)
                         fam_member_list = json.loads(fam.members)
                         fam_member_list.append(usr.phone_number)
@@ -150,26 +150,20 @@ def sms_reply():
             
             if content.lower() == "viewl" or content.lower() == "viewlist" and usr.currentFam != "None":
 
-                if " (auth)" in usr.currentFam:
-
-                    for x in Family.query.all():
-                        print(x.name,usr.currentFam)
-                        if x.name +" (auth)" == usr.currentFam:
-                            member_list = json.loads(x.members)
-                            admin_list = json.loads(x.admins)
-                            owner = x.owner
-                            name = x.name.split(":")[0]
-                            if usr.phone_number in member_list or usr.phone_number in admin_list or usr.phone_number == owner:
-                                rsp = f"You can view {name}'s list at the following link: http://{URL}/{x._id}/list "
-                else:
-                    for x in Family.query.all():
+                for x in Family.query.all():
                         if x.name == usr.currentFam:
                             member_list = json.loads(x.members)
                             admin_list = json.loads(x.admins)
+                            auth_list = json.loads(x.authed_members)
                             owner = x.owner
-                            name = x.name.split(":")[0]
-                            if usr.phone_number in member_list or usr.phone_number in admin_list or usr.phone_number == owner:
-                                rsp = f"You can view {name}'s list at the following link: http://{URL}/{x._id}/auth "
+                            if usr.phone_number in auth_list:
+
+                                name = x.name.split(":")[0]
+                                rsp = f"You can view {name}'s list at the following link: http://{URL}/{x._id}/list"
+                            else:
+                                if usr.phone_number in member_list or usr.phone_number in admin_list or usr.phone_number == owner:
+                                    name = x.name.split(":")[0]
+                                    rsp = f"You can view {name}'s list at the following link: http://{URL}/{x._id}/auth "
 
             if len(content.split(" ")) > 1:
                 if content.split(" ")[0] == "addi":
@@ -184,14 +178,8 @@ def sms_reply():
        
                                 item = content.split("addi ")
                                 item.pop(0)
-                                built_str = ""
-                                if " (auth)" in x:
-                                    name = x.split()
-                                    name.pop()
-                                    for word in name:
-                                        built_str += f"{word} "
-                                print(built_str)
-                                fam_obj = Family.query.filter_by(name=built_str).first()
+
+                                fam_obj = Family.query.filter_by(name=x).first()
                                 fam_list = json.loads(fam_obj.list)
                                 audit_log = json.loads(fam_obj.auditLog)
                                 now = datetime.now()
@@ -443,21 +431,11 @@ def auth(id):
                 usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
                 fam = Family.query.filter_by(_id=id).first()
                 fam_list = json.loads(usr.families)
-                for x in fam_list:
-                    if x == fam.name:
-                        fam_list.remove(x)
-                        if " (auth)" not in x: 
-                            new_name = x + " (auth)"
-                        else:
-                            new_name = x
-                        fam_list.append(new_name)
-                        usr.families = json.dumps(fam_list)
-                        if " (auth)" not in x:
-                            
-                            usr.currentFam = usr.currentFam + " (auth)"
-                        else:
-                            usr.currentFam = x
-                        db.session.commit()
+                auth_list = json.loads(fam.authed_members)
+                auth_list.append(usr.phone_number)
+                fam.authed_members = json.dumps(auth_list)
+                usr.currentFam = fam.name
+                db.session.commit()
 
                 return redirect(f"/{id}/list")
                 
@@ -475,24 +453,19 @@ def shop_list(id):
         return render_template("list.html",close=True,fam=fam)
     
     else:
-        for x in Family.query.all():
+        if usr.phone_number in json.loads(fam.members) or usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner: 
+            perms = False
+        if  usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner:
+            perms = True
+            shoppingList = json.loads(fam.list)
             
-            if x.name + " (auth)" in json.loads(usr.families):
+            name = fam.name.split(":")[0]
+            owner_details = User.query.filter_by(phone_number=fam.owner).first()
 
-                if usr.phone_number in json.loads(fam.members) or usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner: 
-                    perms = False
-                if  usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner:
-                    perms = True
-                    shoppingList = json.loads(fam.list)
-                    
-                    name = fam.name.split(":")[0]
-                    owner_details = User.query.filter_by(phone_number=fam.owner).first()
+            return render_template("list.html",shopList=shoppingList,fam=fam,famName=name,owner=owner_details,perms=perms)
+        else:
+            return render_template("list.html",notValidated=True)
 
-                    return render_template("list.html",shopList=shoppingList,fam=fam,famName=name,owner=owner_details,perms=perms)
-                else:
-                    return render_template("list.html",notValidated=True)
-            else:
-                return redirect(f"/{id}/auth")
 
 @views.route("/<id>/delete/<item_id>")
 def delItem(id,item_id):
@@ -542,6 +515,166 @@ def editItem(id,item_id):
         db.session.commit()
         return redirect(f"/{id}/list")
 
+
+@views.route('/<id>/settings',methods=['POST','GET'])
+def settings(id):
+    fam = Family.query.filter_by(_id=id).first()
+    usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
+    if request.method == "GET":
+        if fam == None or usr == None:
+            return redirect(f'/{fam._id}/list')
+        else:
+            owner = False
+            admin = False
+            if usr.phone_number == fam.owner:
+                owner = True
+            elif usr.phone_number in json.loads(fam.admins):
+                admin = True
+            return render_template("settings.html",fam=fam,owner=owner,admin=admin)
+
+@views.route('/<id>/settings/change-name',methods=["POST","GET"])
+def change_name(id):
+    fam = Family.query.filter_by(_id=id).first()
+    usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
+    if request.method == "GET":
+        if fam == None or usr == None:
+            return redirect(f'/{fam._id}/list')
+        else:
+            if usr.phone_number == fam.owner:
+                return render_template('changeName.html',fam=fam)
+            else:
+                return redirect(f'/{fam._id}/list')
+    elif request.method == "POST":
+        new_name = request.form.get("newname")
+        name = fam.name.split(":")
+        for user in json.loads(fam.admins):
+            usr_obj = User.query.filter_by(phone_number=user).first()
+            fam_list = json.loads(usr_obj.families)
+            for family in fam_list:
+                if family == fam.name:
+                    index = fam_list.index(fam.name)
+                    fam_list[index] = f"{new_name}:owned by {fam.owner}"
+                    usr_obj.families = json.dumps(fam_list)
+                    usr_obj.currentFam = f"{new_name}:owned by {fam.owner}"
+                    db.session.commit()
+                    
+                    
+        for user in json.loads(fam.members):
+            usr_obj = User.query.filter_by(phone_number=user).first()
+            fam_list = json.loads(usr_obj.families)
+            for family in fam_list:
+                if family == fam.name:
+                    index = fam_list.index(fam.name)
+                    fam_list[index] = f"{new_name}:owned by {fam.owner}"
+                    usr_obj.families = json.dumps(fam_list)
+                    usr_obj.currentFam = f"{new_name}:owned by {fam.owner}"
+                    db.session.commit()
+        
+        owner_fam_list = json.loads(usr.families)
+        for family in owner_fam_list:   
+            if family == fam.name:
+                index = owner_fam_list.index(fam.name)
+                owner_fam_list[index] = f"{new_name}:owned by {fam.owner}"
+                usr.families = json.dumps(owner_fam_list)
+                usr.currentFam = f"{new_name}:owned by {fam.owner}"
+                db.session.commit()
+
+        
+        name.pop(0)
+
+        name.insert(0,new_name)
+        built_str = f"{name[0]}:{name[1]}"
+        fam.name = built_str
+
+            
+        db.session.commit()
+        return redirect(f"/{id}/settings")
+
+@views.route('/<id>/settings/manage-admins',methods=["POST","GET"])
+def manageAdmins(id):
+    fam = Family.query.filter_by(_id=id).first()
+    usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
+    if request.method == "GET":
+        if fam == None or usr == None:
+            return redirect(f'/{fam._id}/list')
+        else:
+            if usr.phone_number == fam.owner:
+                admin_list = json.loads(fam.admins)
+                obj_list = []
+                for x in admin_list:
+                    admin  = User.query.filter_by(phone_number=x).first()
+                    obj_list.append(admin)
+                return render_template('manageAdmins.html',fam=fam,adminList=obj_list)
+            else:
+                return redirect(f'/{fam._id}/list')
+    
+    elif request.method == "POST":
+        adminnumber = request.form.get("adminnumber")
+        admin_list = json.loads(fam.admins)
+        admin_list.remove(adminnumber)
+        fam.admins = json.dumps(admin_list)
+        db.session.commit()
+        return redirect(f'/{fam._id}/settings/manage-admins')
+    
+@views.route('/<id>/settings/manage-admins/add',methods=["POST","GET"])
+def addAdmin(id):
+    fam = Family.query.filter_by(_id=id).first()
+    usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
+    if request.method == "GET":
+        if fam == None or usr == None:
+            return redirect(f'/{fam._id}/list')
+        else:
+            if usr.phone_number == fam.owner:
+                admin_list = json.loads(fam.admins)
+                return render_template('addAdmin.html',fam=fam,adminList=admin_list)
+            else:
+                return redirect(f'/{fam._id}/list')
+
+    elif request.method == "POST":
+        new_admin = "+1" + request.form.get("newadmin")
+        admin_list = json.loads(fam.admins)
+        if new_admin in admin_list:
+            pass
+        else:
+            admin_list.append(new_admin)
+            fam.admins = json.dumps(admin_list)
+            db.session.commit()
+        return redirect(f'/{fam._id}/settings/manage-admins')
+
+
+
+@views.route('/<id>/settings/manage-members',methods=["POST","GET"])
+def manageMembers(id):
+    
+    fam = Family.query.filter_by(_id=id).first()
+
+    usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
+    if request.method == "GET":
+        if fam == None or usr == None:
+            return redirect(f'/{fam._id}/list')
+        else:
+            if usr.phone_number == fam.owner or usr.phone_number in json.loads(fam.admins):
+                member_list = json.loads(fam.members)
+                obj_list = []
+                for x in member_list:
+                    member  = User.query.filter_by(phone_number=x).first()
+                    obj_list.append(member)
+                return render_template("manageMembers.html",fam=fam,memberList=obj_list)
+    elif request.method == "POST":
+
+        member = request.form.get("membernumber")
+
+        member_list = json.loads(fam.members)
+        usr_to_remove = User.query.filter_by(phone_number=member).first()
+        usrs_families = json.loads(usr_to_remove.families)
+
+        usrs_families.remove(fam.name)
+        usr_to_remove.famiies  = json.dumps(usrs_families)
+        usr_to_remove.currentFam = "None"
+        member_list.remove(member)
+        fam.members = json.dumps(member_list)
+        db.session.commit()
+        return redirect(f'/{fam._id}/settings/manage-members')
 # --------------------------- TEST FUNCTIONS ---------------------------
 
 def selectDevCmd(usr,content):
@@ -751,7 +884,7 @@ def createDefaultUser():
 
 def createTestFam():
     code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-    family = Family("TESTFAMILY","4071111111",json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]))
+    family = Family("TESTFAMILY","4071111111",json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]),json.dumps([]))
     db.session.add(family)
     db.session.commit()
     return "test family has been created"
@@ -792,7 +925,7 @@ def resetTestFam():
     db.session.delete(testfam)
     db.session.commit()
     code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-    family = Family("TESTFAMILY","4071111111",json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]))
+    family = Family("TESTFAMILY","4071111111",json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]),json.dumps([]))
     db.session.add(family)
     db.session.commit()
     return "test family has been reset"

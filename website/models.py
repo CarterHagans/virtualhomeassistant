@@ -33,10 +33,11 @@ class Family(db.Model):
     joincode = db.Column(db.String(100))
     list = db.Column(db.String(10000))
     auditLog = db.Column(db.String(10000))
+    authed_members = db.Column(db.String(10000))
 
 
     
-    def __init__(self,name,owner,admins,members,joincode,list,auditLog):
+    def __init__(self,name,owner,admins,members,joincode,list,auditLog,authed_members):
         self.name = name
         self.owner = owner
         self.admins = admins
@@ -44,3 +45,4 @@ class Family(db.Model):
         self.joincode = joincode
         self.list = list
         self.auditLog = auditLog
+        self.authed_members = authed_members
