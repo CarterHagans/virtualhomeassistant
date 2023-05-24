@@ -22,7 +22,8 @@ def create_app():
 
 
 
-    create_database(app)
+    with app.app_context():
+        db.create_all()
 
 
     app.register_blueprint(views, url_prefix="/")
@@ -30,13 +31,6 @@ def create_app():
 
     return app
 
-
-
-
-def create_database(app):
-    if not path.exists("website/" + DB_NAME):
-        db.create_all(app=app)
-        print("Created database!")
 
 
 

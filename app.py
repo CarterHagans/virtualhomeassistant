@@ -30,5 +30,5 @@ if __name__ == "__main__":
     override_url_for()
 
 
-    flask_app.run(host="localhost",debug=True) # change this to local host when working locally and 185.211.4.18  when pushing to server
+    flask_app.run(host="0.0.0.0",debug=True) 
 

@@ -2,7 +2,6 @@ import os
 import random
 import string
 from twilio.rest import Client
-from dotenv import load_dotenv
 from flask import Flask, Response, redirect, render_template, request,Blueprint, session
 from twilio.twiml.messaging_response import MessagingResponse
 from flask_sqlalchemy import SQLAlchemy
@@ -13,16 +12,14 @@ from . import db
 from datetime import datetime
 import json
 
-import openai
 
 
-openai.api_key = "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"
 
 views = Blueprint("views", __name__)
 
-load_dotenv()
-account_sid = os.getenv("ACCOUNT_SID")
-auth_token = os.getenv("AUTH_TOKEN")
+
+account_sid =  'n/a'
+auth_token = 'n/a'
 client = Client(account_sid,auth_token)
 
 
@@ -30,7 +27,7 @@ DEV_OPTIONS = [" Create default user\n"," Create test family\n"," View test fami
 
 
 
-URL = "localhost:5000"
+URL = "virtualshoppinglist.com"
 
 # ----------------- replying to a message ----------------- #
 
@@ -67,8 +64,7 @@ def sms_reply():
             createAccount(usr,content)
         # -------------- Functions after account has been created --------------
         elif usr.fullAcc == True:
-            if content.lower() == "cmds" or content.lower() == "commands" or content.lower() == "cmdlist" and usr.currentFam == "None":
-                rsp = "View Families: Displays the families you are a part of\n\nCreate Family: Create a family\n\nJoin Family: Join a family\n\nChange name: Change the name of your account\n\nLogin (familyname): Logs your session into a specific family"
+            
             
            
 
@@ -76,7 +72,7 @@ def sms_reply():
             if content.lower() == "create" or content.lower() ==  "createfamily" or content.lower() == "createfam" and usr.currentFam == "None":
                 code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
 
-                family = Family("TEMP",usr.phone_number,json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]),json.dumps([]))
+                family = Family("TEMP",usr.phone_number,json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]),json.dumps([]),json.dumps([]))
                 db.session.add(family)
                 rsp = "Please choose a name for your new family!"
                 usr.status = "choosingNameForFamily"
@@ -145,8 +141,13 @@ def sms_reply():
             
             
             # ------------------- Family Commands -------------------
-            if content.lower() == "cmds" or content.lower() == "commands" or content.lower() == "cmdlist" and usr.currentFam != "None":
-                rsp = f"Commands of family: {usr.currentFam}\n\n View List (viewl): View the shopping list of this fmaily\n\Add Item (addi): Adds an item to the shopping list\n\nRemove Item (rmvi): Removes an item from the shopping list\n\nEdit item (editi): Edit an item in the shopping list\n\nView Members (viewm): View the members of this family\n\nView Admins (viewa): View the admins of this family\n\nView owner: See who owns the family\n\nView Annoucements (viewa): View the announcements put out by admins and the owner.\n\nLogout: Logs out of this family.\n\nADMIN COMMMNANDS: Kick: Kicks a member\n\nAnnounce: Create an announcement for the family\n\nAudit log: Views the audit log of administrative actions.\n\nOWNER COMMANDS:\n\nBan: Bans a user\n\nManage admins: Manage the roles of others\n\nFamily edit: Edit things about the family such as public, private family, name, and more."   
+            if content.lower() == "cmds"  and usr.currentFam == "None":
+                rsp = "View Families: Displays the families you are a part of\n\nCreate Family: Create a family\n\nJoin Family: Join a family\n\nChange name: Change the name of your account\n\nLogin (familyname): Logs your session into a specific family"
+            
+            elif content.lower() == "cmds" and usr.currentFam != "None":
+                rsp = f"Commands of family: {usr.currentFam}\n\n View List (viewl): View the shopping list of this fmaily\n\nAdd Item (addi): Adds an item to the shopping list\n\nView Members (viewm): View the members of this family\n\nView Admins (viewa): View the admins of this family\n\nView owner: See who owns the family\n\nView Annoucements (viewann): View the announcements put out by admins and the owner.\n\nLogout: Logs out of this family.\n\nADMIN COMMMNANDS:\n\nRemove Item (rmvi): Removes an item from the shopping list\n\nEdit item (editi): Edit an item in the shopping list\n\n Kick: Kicks a member\n\nAnnounce: Create an announcement for the family\n\nAudit log: Views the audit log of administrative actions.\n\nOWNER COMMANDS:\n\nFamily edit: Edit things about the family such as public, private family, name, and more."  
+
+
             
             if content.lower() == "viewl" or content.lower() == "viewlist" and usr.currentFam != "None":
 
@@ -165,6 +166,156 @@ def sms_reply():
                                     name = x.name.split(":")[0]
                                     rsp = f"You can view {name}'s list at the following link: http://{URL}/{x._id}/auth "
 
+            elif content.lower() == "logout" and usr.currentFam != "None":
+                rsp = f"You have succesfully logged out of your current family: {usr.currentFam}"
+                usr.currentFam = "None"
+                db.session.commit()
+                
+            elif content.lower() == "viewm" and usr.currentFam!="None" or content.lower() == "viewmembers" and usr.currentFam!="None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                
+                fam_members = json.loads(fam_obj.members)
+                if len(fam_members) == 0:
+                    rsp = "There are currently no members in the family."
+                else:
+                    built_str = f"Members of {fam_obj.name}\n\n"
+                    for x in fam_members:
+                        usr_obj = User.query.filter_by(phone_number=x).first()
+                        built_str += f"{usr_obj.name}: {x}\n"
+                        rsp = built_str
+            
+            elif content.lower() == "viewa" and usr.currentFam!="None" or content.lower() == "viewadmins" and usr.currentFam!="None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                
+                fam_members = json.loads(fam_obj.admins)
+                if len(fam_members) == 0:
+                    rsp = "There are currently no admins in the family."
+                else:
+                    built_str = f"Members of {fam_obj.name}\n\n"
+                    for x in fam_members:
+                        usr_obj = User.query.filter_by(phone_number=x).first()
+                        built_str += f"{usr_obj.name}: {x}\n"
+                        rsp = built_str
+                        
+            elif content.lower() == "viewo" and usr.currentFam != "None" or content.lower() == "viewowner" and usr.currentFam !="None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                owner_obj = User.query.filter_by(phone_number=fam_obj.owner).first()
+                rsp = f"The owner of this is family is {owner_obj.name} ({fam_obj.owner})"
+            
+            elif content.lower() == "announce" and usr.currentFam != "None" or content.lower() == "ann" and usr.currentFam != "None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                
+                admin_list = json.loads(fam_obj.admins)
+                
+                if usr.phone_number == fam_obj.owner or usr.phone_number in admin_list:
+                    usr.status = "creatingAnn"
+                    rsp = "Please reply with the message you wish to announce."
+                    db.session.commit()
+                else:
+                    rsp = "You must be an admin or owner to announce something."
+            
+            elif usr.status == "creatingAnn":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                ann = content
+                ann_list = json.loads(fam_obj.announcements)
+                now = datetime.now()
+                dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+                ann_list.insert(0,f"{dt_string}: {ann}")
+                fam_obj.announcements = json.dumps(ann_list)
+                usr.status = ""
+                db.session.commit()
+                rsp = f"Operation successful:\n\nUser: {usr.name}\n\nAction: Created announcement\n\nAnnouncement: {ann}"
+            
+            elif content.lower() == "viewann" and usr.currentFam != "None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                ann_list = json.loads(fam_obj.announcements)
+                rsp = f"Current annoucement:\n\n{ann_list[0]}\n\nIf you would like to view all announcements, please type viewannall"
+            
+            
+            elif content.lower() == "joincode" and usr.currentFam != "None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                rsp = f"Joincode is {fam_obj.joincode}"
+            
+            elif content.lower() == "viewannall" and usr.currentFam != "None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                ann_list = json.loads(fam_obj.announcements)
+                built_str = f"All announcements of {fam_obj.name}:\n\n"
+                for x in ann_list:
+                    built_str +=f'{x}\n\n'
+                rsp = built_str
+            
+            elif content.split(" ")[0] == "kick" and usr.currentFam != "None":
+                fam_obj = Family.query.filter_by(name=usr.currentFam).first()
+                admin_list = json.loads(fam_obj.admins)
+                member_list = json.loads(fam_obj.members)
+                item = content.split("kick ")
+                item.pop(0)
+                usr_to_kick = item[0]
+                if usr.phone_number in admin_list or usr.phone_number == fam_obj.owner:
+                    if usr_to_kick in member_list:
+                        member_list.remove(usr_to_kick)
+                        usr_to_kick_obj = User.query.filter_by(phone_number=usr_to_kick).first()
+                        usrs_fams = json.loads(usr_to_kick_obj.families)
+                        usrs_fams.remove(fam_obj.name)
+                        if usr_to_kick_obj.currentFam == fam_obj.name:
+                            usr_to_kick_obj.currentFam = "None"
+                        usr_to_kick_obj.families = json.dumps(usrs_fams)
+                        fam_obj.members = json.dumps(member_list)
+                        db.session.commit()
+                        rsp = f"Operation successful:\n\nUser: {usr.name}\n\nAction: Kicked a user\n\nUser kicked: {usr_to_kick_obj.name}"
+                    elif usr_to_kick in admin_list:
+                        if usr.phone_number == fam_obj.owner:
+                            admin_list.remove(usr_to_kick)
+                            usr_to_kick_obj = User.query.filter_by(phone_number=usr_to_kick).first()
+                            usrs_fams = json.loads(usr_to_kick_obj.families)
+                            usrs_fams.remove(fam_obj.name)
+                            if usr_to_kick_obj.currentFam == fam_obj.name:
+                                usr_to_kick_obj.currentFam = "None"
+                            usr_to_kick_obj.families = json.dumps(usrs_fams)
+                            fam_obj.admins = json.dumps(admin_list) 
+                            db.session.commit()
+                            rsp = f"Operation successful:\n\nUser: {usr.name}\n\nAction: Kicked a user\n\nUser kicked: {usr_to_kick_obj.name}"
+                        else:
+                            rsp  = "You must be the owner to kick an admin."
+                    else:
+                        rsp = "User not found."
+                else:
+                    rsp = "You do not have permission to kick someone from this family."
+            
+            elif content.lower() == "viewaudit" and usr.currentFam != "None":
+                fam_to_find = Family.query.filter_by(name=usr.currentFam).first()    
+                admin_list = json.loads(fam_to_find.admins)
+                auditLog = json.loads(fam_to_find.auditLog)
+                if usr.phone_number in admin_list or usr.phone_number == fam_to_find.owner:
+                    built_str = f"Audit log of {fam_to_find.name}:\n\n"
+                    for x in auditLog:
+                        built_str += f"{x}\n\n"
+                    rsp = built_str
+                else:
+                    rsp = "You do not have permission to run this command."
+            
+            
+            elif "editItem" in usr.status:
+                new_name = content
+                fam_to_find = usr.currentFam
+                for x in json.loads(usr.families):
+                    if x == fam_to_find:
+                        fam_obj  =  Family.query.filter_by(name=x).first()
+                        fam_list = json.loads(fam_obj.list)
+                        item_id = usr.status.split("editItem")[1]
+                        original_name = fam_list[int(item_id)-1].split(": ")[1]
+                        audit_log = json.loads(fam_obj.auditLog)
+                        now = datetime.now()
+                        dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+                        audit_log.append(f"{dt_string}: {usr.name} edited {original_name}  to {new_name}")
+                        fam_list[int(item_id)-1] = f"{item_id}: {new_name}: Previously edited by {usr.name} , they renamed this item to {new_name}. The previous name of this item was {original_name}: {dt_string}"
+                        fam_obj.list = json.dumps(fam_list)
+                        fam_obj.auditLog = json.dumps(audit_log)
+                        usr.status = ""
+                        db.session.commit()
+                        rsp = f"Operation Succesful\n\nUser: {usr.name}\n\nAction: Edited an item on the list: renamed {original_name} to {new_name} \n\nFamily: {fam_obj.name}"
+                        
+
             if len(content.split(" ")) > 1:
                 if content.split(" ")[0] == "addi":
 
@@ -175,24 +326,82 @@ def sms_reply():
                         for x in json.loads(usr.families):
 
                             if x== fam_to_find:
-       
+                                
                                 item = content.split("addi ")
                                 item.pop(0)
 
                                 fam_obj = Family.query.filter_by(name=x).first()
+                               
+                                        
                                 fam_list = json.loads(fam_obj.list)
                                 audit_log = json.loads(fam_obj.auditLog)
                                 now = datetime.now()
                                 dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
                                 fam_list.append(f"{len(fam_list) +1}: {item[0]}: Added by {usr.name}: {dt_string}")
-
-                               
+                                audit_log.append(f"{dt_string}: {usr.name} added {item[0]} to the list")
+                            
 
                                 fam_name = x.split(":")[0]
                                 rsp = f"Operation Succesful\n\nUser: {usr.name}\n\nAction: Added an item to the list: {item[0]} \n\nFamily: {fam_name}"
                                 fam_obj.list = json.dumps(fam_list)
+                                fam_obj.auditLog = json.dumps(audit_log)
+                                    
                                 db.session.commit()
-                                
+
+                elif content.split(" ")[0] == "rmvi":
+                    fam_to_find = usr.currentFam
+                    if fam_to_find == "None":
+                        rsp = "You must be logged in to a family to execute this command."
+                    else:
+                        for x in json.loads(usr.families):
+                            if x== fam_to_find:
+                                item = content.split("rmvi ")
+                                item.pop(0)
+                                fam_obj = Family.query.filter_by(name=x).first()
+                                if usr.phone_number in json.loads(fam_obj.admins) or usr.phone_number == fam_obj.owner:
+                                    fam_list = json.loads(fam_obj.list)
+                                    audit_log = json.loads(fam_obj.auditLog)
+                                    now = datetime.now()
+                                    fam_name = x.split(":")[0]
+                                    
+                                    dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+                                    for x in fam_list:
+                                        if x.split(": ")[1] == item[0]:
+                                            fam_list.remove(x)
+                                            audit_log.append(f"{dt_string}: {usr.name} removed {item[0]} from the list")
+                                            fam_obj.list = json.dumps(fam_list)
+                                            fam_obj.auditLog = json.dumps(audit_log)
+                                            db.session.commit()
+
+                                            rsp = f"Operation Succesful\n\nUser: {usr.name}\n\nAction: Removed an item from the list: {item[0]} \n\nFamily: {fam_name}"
+                                else:
+                                    rsp = "You must be an admin or the owner of the family to run this command."
+                
+                elif content.split(" ")[0] == "editi":                       
+                    fam_to_find = usr.currentFam
+                    if fam_to_find == "None":
+                        rsp = "You must be logged in to a family to execute this command."
+                    else:
+                        for x in json.loads(usr.families):
+                            if x== fam_to_find:
+                                item = content.split("editi ")
+                                item.pop(0)
+                                fam_obj = Family.query.filter_by(name=x).first()
+                                if usr.phone_number in json.loads(fam_obj.admins) or usr.phone_number == fam_obj.owner:
+                                    fam_list = json.loads(fam_obj.list)
+                                    audit_log = json.loads(fam_obj.auditLog)
+                                    now = datetime.now()
+                                    fam_name = x.split(":")[0]
+                                    
+                                    dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+                                    for x in fam_list:
+                                        if x.split(": ")[1] == item[0]:
+                                            usr.status = f"editItem{x.split(': ')[0]}"
+                                            db.session.commit()
+                                            rsp = "Please reply with the new name you would like this item to have."
+     
+                                else:
+                                    rsp = "You must be an admin or the owner of the family to run this command."
      # ------------------------------- Dev commands ---------------------------------------------
         
             if content.lower() == "dcmds":
@@ -391,6 +600,12 @@ def loginToFam(usr,content):
                 
 # --------------------------- VIEW FUNCTIONS ---------------------------       
     
+    
+@views.route('/')
+def home():
+    return render_template("home.html")
+
+
 @views.route("/<id>/auth",methods=["POST","GET"])    
 def auth(id):
 
@@ -453,18 +668,27 @@ def shop_list(id):
         return render_template("list.html",close=True,fam=fam)
     
     else:
-        if usr.phone_number in json.loads(fam.members) or usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner: 
-            perms = False
         if  usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner:
-            perms = True
-            shoppingList = json.loads(fam.list)
-            
-            name = fam.name.split(":")[0]
-            owner_details = User.query.filter_by(phone_number=fam.owner).first()
+           perms = True
+           shoppingList = json.loads(fam.list)
 
-            return render_template("list.html",shopList=shoppingList,fam=fam,famName=name,owner=owner_details,perms=perms)
+           name = fam.name.split(":")[0]
+           owner_details = User.query.filter_by(phone_number=fam.owner).first()
+           return render_template("list.html",shopList=shoppingList,fam=fam,famName=name,owner=owner_details,perms=perms)
+        
+        if usr.phone_number in json.loads(fam.members): 
+            perms = False
+            owner_details = User.query.filter_by(phone_number=fam.owner).first()
+            shoppingList = json.loads(fam.list)
+            name = fam.name.split(":")[0]
+            return render_template("list.html",perms=perms,fam=fam,owner=owner_details,shopList=shoppingList,famName=name)
+        
+
+ 
         else:
-            return render_template("list.html",notValidated=True)
+
+            owner_details = User.query.filter_by(phone_number=fam.owner).first()
+            return render_template("list.html",notValidated=True,owner=owner_details,fam=fam)
 
 
 @views.route("/<id>/delete/<item_id>")
@@ -476,9 +700,15 @@ def delItem(id,item_id):
     else:
         if  usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner:
             fam_list = json.loads(fam.list)
+            audit_log = json.loads(fam.auditLog)
+            now = datetime.now()
+            dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+
             index = int(item_id) -1
+            audit_log.append(f"{dt_string}: {usr.name} removed {fam_list[index].split(': ')[1]} from the list")
             fam_list.remove(fam_list[index])
             fam.list = json.dumps(fam_list)
+            fam.auditLog = json.dumps(audit_log)
             db.session.commit()
             return render_template("delItem.html",perms=True,fam=fam)
         elif usr.phone_number in json.loads(fam.members):
@@ -507,11 +737,19 @@ def editItem(id,item_id):
     elif request.method == "POST":
         new_name = request.form.get("newname")
         fam_list = json.loads(fam.list)
+        audit_log = json.loads(fam.auditLog)
+        now = datetime.now()
+        dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+
+
         index = int(item_id) -1
         item = fam_list[index]
         split_item = item.split(": ")
-        fam_list[index] = f"{item_id}: {new_name}: Previously edited by {usr.name} , they renamed this item to {new_name}. The previous name of this item was {split_item[1]} : {split_item[3]}"
+        fam_list[index] = f"{item_id}: {new_name}: Previously edited by {usr.name} , they renamed this item to {new_name}. The previous name of this item was {split_item[1]} : {dt_string}"
+        audit_log.append(f"{dt_string}: {usr.name} edited {split_item[1]} to {new_name}")
         fam.list = json.dumps(fam_list)
+        fam.auditLog = json.dumps(audit_log)
+
         db.session.commit()
         return redirect(f"/{id}/list")
 
@@ -531,6 +769,38 @@ def settings(id):
             elif usr.phone_number in json.loads(fam.admins):
                 admin = True
             return render_template("settings.html",fam=fam,owner=owner,admin=admin)
+    elif request.method == "POST":
+        for user in json.loads(fam.admins):
+            usr_obj = User.query.filter_by(phone_number=user).first()
+            fam_list = json.loads(usr_obj.families)
+            for family in fam_list:
+                if family == fam.name:
+                    fam_list.remove(family)
+                    usr_obj.families = json.dumps(fam_list)
+                    usr_obj.currentFam = f"None"
+                    db.session.commit()
+                    
+                    
+        for user in json.loads(fam.members):
+            usr_obj = User.query.filter_by(phone_number=user).first()
+            fam_list = json.loads(usr_obj.families)
+            for family in fam_list:
+                if family == fam.name:
+                    fam_list.remove(family)
+                    usr_obj.families = json.dumps(fam_list)
+                    usr_obj.currentFam = f"None"
+                    db.session.commit()
+                    
+        owner_fam_list = json.loads(usr.families)
+        for family in owner_fam_list:   
+            if family == fam.name:
+                owner_fam_list.remove(family)
+                usr.families = json.dumps(owner_fam_list)
+                usr.currentFam = f"None"
+                db.session.commit()
+        db.session.delete(fam)
+        db.session.commit()
+        return redirect('/')
 
 @views.route('/<id>/settings/change-name',methods=["POST","GET"])
 def change_name(id):
@@ -675,6 +945,44 @@ def manageMembers(id):
         fam.members = json.dumps(member_list)
         db.session.commit()
         return redirect(f'/{fam._id}/settings/manage-members')
+    
+    
+@views.route('/<id>/settings/logs',methods=["POST","GET"])
+def viewLogs(id):
+    
+    fam = Family.query.filter_by(_id=id).first()
+
+    usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
+    if request.method == "GET":
+        if fam == None or usr == None:
+            return redirect(f'/{fam._id}/list')
+        else:
+            if usr.phone_number == fam.owner or usr.phone_number in json.loads(fam.admins):
+                audit_log = json.loads(fam.auditLog)
+                return render_template("logs.html",auditLog=audit_log,fam=fam)
+            
+@views.route("/<id>/add",methods=['GET',"POST"])
+def addItem(id):
+    fam = Family.query.filter_by(_id=id).first()
+    usr = User.query.filter_by(phone_number=session.get("phoneNumber")).first()
+    if request.method == "GET":
+        if fam == None or usr == None:
+            return render_template("home.html")
+        else:
+            if usr.phone_number in json.loads(fam.members) or usr.phone_number in json.loads(fam.admins) or usr.phone_number == fam.owner:
+                return render_template("addItem.html")
+    elif request.method == "POST":
+        item_name = request.form.get("newname")
+        fam_list = json.loads(fam.list)
+        audit_log = json.loads(fam.auditLog)       
+        now = datetime.now()
+        dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+        fam_list.append(f"{len(fam_list) +1}: {item_name}: Added by {usr.name}: {dt_string}")
+        audit_log.append(f"{dt_string}: {usr.name} added {item_name} to the list") 
+        fam.list = json.dumps(fam_list)
+        fam.auditLog = json.dumps(audit_log)
+        db.session.commit()
+        return redirect(f'/{fam._id}/list')  
 # --------------------------- TEST FUNCTIONS ---------------------------
 
 def selectDevCmd(usr,content):
@@ -884,7 +1192,7 @@ def createDefaultUser():
 
 def createTestFam():
     code = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
-    family = Family("TESTFAMILY","4071111111",json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]),json.dumps([]))
+    family = Family("TESTFAMILY","4071111111",json.dumps([]),json.dumps([]),f"{code}",json.dumps([]),json.dumps([]),json.dumps([]),json.dumps([]))
     db.session.add(family)
     db.session.commit()
     return "test family has been created"

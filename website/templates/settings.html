@@ -11,17 +11,27 @@
 </head>
 
 <body id="settingsBody">
+  
+  <a href="/{{fam._id}}/list">
+    <button class="btn btn-danger btn-lg">Back to list</button>
+    </a>
     {% if owner == True %}
     <h1 id="settingsHead">Managing family: {{fam.name.split(":")[0]}}</h1>
     <div id="manageBtns">
         <button onclick='changeFamilyName();' id="settingsBtn" type="button" class="btn btn-secondary">Change family name</button>
         <button id="settingsBtn" onclick="manageAdmins();" type="button" class="btn btn-secondary">Manage admins</button>
         <button id="settingsBtn" onclick="manageMembers();" type="button" class="btn btn-secondary">Manage members</button>
-        <button id="settingsBtn" type="button" class="btn btn-secondary">Audit log</button>
-        <button id="settingsBtn" type="button" class="btn btn-danger">Delete family</button>
+        <button id="settingsBtn" onclick='viewLogs();' type="button" class="btn btn-secondary">Audit log</button>
+        <form method="POST">
+        <button id="settingsBtn" type="submit" class="btn btn-danger">Delete family</button>
+        </form>
     </div>
     {% elif admin == True %}
-    admin perms
+    <h1 id="settingsHead">Managing family: {{fam.name.split(":")[0]}}</h1>
+    <div id="manageBtns">
+    <button id="settingsBtn" onclick="manageMembers();" type="button" class="btn btn-secondary">Manage members</button>
+    <button id="settingsBtn" onclick='viewLogs();' type="button" class="btn btn-secondary">Audit log</button>
+    </div>
     {% endif %}
     <div id="myModal" class="modal">
 
@@ -51,6 +61,10 @@
 
         function manageMembers(){
           window.location.replace('/{{fam._id}}/settings/manage-members')
+        }
+
+        function viewLogs(){
+          window.location.replace('/{{fam._id}}/settings/logs')
         }
 
         span.onclick = function() {

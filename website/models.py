@@ -1,5 +1,5 @@
 from operator import inv
-from tkinter.font import families
+
 from . import db
 from sqlalchemy.sql import func
 
@@ -11,6 +11,7 @@ class User(db.Model):
     families = db.Column(db.String(5000))
     status = db.Column(db.String(500))
     fullAcc = db.Column(db.Boolean, default=False, nullable=False)
+    inCmd = db.Column(db.Boolean, default=False, nullable=False)
     currentFam = db.Column(db.String(500))
     selfSearchResults = db.Column(db.String(5000))
     
@@ -24,6 +25,7 @@ class User(db.Model):
         self.famSearchResults = selfSearchResults
 
 
+
 class Family(db.Model):
     _id = db.Column(db.Integer,primary_key = True)
     name = db.Column(db.String(500))
@@ -34,10 +36,11 @@ class Family(db.Model):
     list = db.Column(db.String(10000))
     auditLog = db.Column(db.String(10000))
     authed_members = db.Column(db.String(10000))
+    announcements = db.Column(db.String(10000))
 
 
     
-    def __init__(self,name,owner,admins,members,joincode,list,auditLog,authed_members):
+    def __init__(self,name,owner,admins,members,joincode,list,auditLog,authed_members,announcements):
         self.name = name
         self.owner = owner
         self.admins = admins
@@ -46,3 +49,4 @@ class Family(db.Model):
         self.list = list
         self.auditLog = auditLog
         self.authed_members = authed_members
+        self.announcements = announcements

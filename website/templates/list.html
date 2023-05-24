@@ -21,11 +21,18 @@
       </h3>
       {% if perms == True %}
       <div id="admin_btn">
-        <a href="/{{fam._id}}/settings">
+
+      <a href="/{{fam._id}}/settings">
       <button type="button" class="btn btn-danger">Admin options</button>
       </a>
       </div>
       {% endif %}
+      <div id="admin_btn">
+      <a href="/{{fam._id}}/add">
+        <button type="button" class="btn btn-success">Add Item</button>
+  
+        </a>
+        </div>
       <ul class="list-group">
         {% for x in shopList %}
             <a onclick='showDetails("{{x}}");' id="listItem"  class="list-group-item list-group-item-action">{{x.split(":")[1]}}</a>
