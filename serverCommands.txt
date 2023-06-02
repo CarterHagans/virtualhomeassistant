@@ -1,3 +1,0 @@
-cd /root/flask_app
-start: gunicorn3 --workers=3 "website:create_app()" --daemon
-stop: sudo pkill -f gunicorn3
