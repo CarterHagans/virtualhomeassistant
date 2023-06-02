@@ -1,0 +1,82 @@
+<title>Digital Shopping List - Dashboard</title>
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="{{url_for('static', filename='main.css')}}">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.3/socket.io.js"></script>
+  <script src="https://kit.fontawesome.com/110c0c7de8.js" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
+</head>
+
+
+<body id="dashboardBody">
+    <nav class="navbar navbar-light bg-light">
+        <ul  id='dashboardNavbar' >
+        <li id="dashboardNavItem">
+            <a class="navbar-brand" href="">Virtual Shopping List</a>
+        </li>
+        <li id="dashboardNavItem">
+        <a href="/dashboard">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="25" height="25"><path d="M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z"></path></svg>
+        </a>
+        </li>
+        <li id="dashboardNavItem">
+        <a href="/switch-family" >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3.5 8a5.5 5.5 0 1 1 8.596 4.547 9.005 9.005 0 0 1 5.9 8.18.751.751 0 0 1-1.5.045 7.5 7.5 0 0 0-14.993 0 .75.75 0 0 1-1.499-.044 9.005 9.005 0 0 1 5.9-8.181A5.496 5.496 0 0 1 3.5 8ZM9 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.29 4c-.148 0-.292.01-.434.03a.75.75 0 1 1-.212-1.484 4.53 4.53 0 0 1 3.38 8.097 6.69 6.69 0 0 1 3.956 6.107.75.75 0 0 1-1.5 0 5.193 5.193 0 0 0-3.696-4.972l-.534-.16v-1.676l.41-.209A3.03 3.03 0 0 0 17.29 8Z"></path></svg>
+        </a> 
+        </li>
+
+        {% if usr.currentFam != "None" %}
+
+        <li id="dashboardNavItem">
+            <a href="/{{fam._id}}/list" >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M3.5 3.75a.25.25 0 0 1 .25-.25h13.5a.25.25 0 0 1 .25.25v10a.75.75 0 0 0 1.5 0v-10A1.75 1.75 0 0 0 17.25 2H3.75A1.75 1.75 0 0 0 2 3.75v16.5c0 .966.784 1.75 1.75 1.75h7a.75.75 0 0 0 0-1.5h-7a.25.25 0 0 1-.25-.25V3.75Z"></path><path d="M6.25 7a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Zm-.75 4.75a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Zm16.28 4.53a.75.75 0 1 0-1.06-1.06l-4.97 4.97-1.97-1.97a.75.75 0 1 0-1.06 1.06l2.5 2.5a.75.75 0 0 0 1.06 0l5.5-5.5Z"></path></svg>
+            </a> 
+        </li>
+        {% endif %}
+
+        </ul>
+      </nav>
+    <h1 id="dashboardHead"></h1>
+    <h1 id="dashboardTime"></h1>
+    <h1 id="memberSince">Loyal member since {{usr.created_on}} </h1>
+    <h1 id="dashboardHead">You are currently a part of {{num_of_fams}} families</h1>
+    <h1 id="dashboardHead">Currently logged into: {{usr.currentFam.split(":")[0]}}</h1>
+
+    <div id="switchFamBtn">
+        <a href="/switch-family">
+        <button type="button" class="btn btn-outline-primary">Switch family</button>
+        </a>
+    </div>
+
+    <script>
+        function updateTime(){
+            var currentTime = new Date()
+            var hours = currentTime.getHours()
+            var minutes = currentTime.getMinutes()
+            if (minutes < 10){
+                minutes = "0" + minutes
+            }
+            var t_str = hours + ":" + minutes + " ";
+            if(hours > 11){
+                t_str += "PM";
+            } else {
+                t_str += "AM";
+            }
+            if(hours<= 11 && hours >= 5){
+                document.getElementById('dashboardHead').innerHTML = "Good morning, {{usr.name}}.";
+            }else if(hours > 11 && hours < 17){
+                document.getElementById('dashboardHead').innerHTML = "Good afternoon, {{usr.name}}.";
+                
+            }else if (hours >= 17){
+                document.getElementById('dashboardHead').innerHTML = "Good evening, {{usr.name}}.";
+            }
+            document.getElementById('dashboardTime').innerHTML = t_str;
+        }        
+        setInterval(updateTime, 1000);
+    </script>
+    
+</body>
